@@ -1,0 +1,248 @@
+\documentclass[final,narroweqnarray,inline,twoside]{ieee}
+
+\usepackage{ucs}
+\usepackage[utf8x]{inputenc}
+\usepackage[spanish]{babel}
+\usepackage{fontenc}
+\usepackage{graphicx}
+\usepackage{textcomp}
+\usepackage{tipa}
+
+%\usepackage{hyperref}
+\newcommand{\itref}[1]{[{#1}]}
+\author{Francisco Javier Díaz \\Joaquín Ignacio Bogado García \\
+Claudia Banchoff Tzancoff\\Einar Felipe Lanfranco \\ \{javierd,jbogado,cbanchoff,einar\}@linti.unlp.edu.ar 
+\\LINTI. Facultad de Informática, Universidad Nacional de La Plata.
+\\La Plata, B1900ASD, ARGENTINA
+}
+\title{Lethe\\Congelador de particiones\\para Lihuen GNU/Linux}
+
+\hyphenation{ins-ta-la-ble ella es-tu-dian-tes nues-tro bo-rran-do cada i-ma-gen dado opera-ti-vo linux extra-pola mi-nu-tos caso ser-vicios biblio-teca inicio rea-licen algu-nos comenzo Lethe Ubuntu ROOTAUFS STATE sourceforge DEBIAN algu-nos herramienta Lethe}
+\begin{document}
+\pagenumbering{none}
+\maketitle
+\sloppy
+
+\begin{abstract}
+En ambientes con equipos de uso público como laboratorios, salas de computación, cibercafés o academias, es deseable que el uso por parte de un usuario no afecte la configuración ni el software instalado en ese equipo. 
+
+El objetivo de este artículo es describir el desarrollo de Lethe, un sistema que permite proteger el contenido del o los discos de una PC independientemente de los cambios que realice un usuario distribuido bajo licencia GPL.
+
+Dicha protección se realiza mediante el congelamiento de las particiones del disco utilizando Aufs, está pensado y desarrollado para entornos Lihuen GNU/Linux \itref{1}, y en general, es aplicable en cualquier sistema derivado de Debian GNU/Linux\itref{2}.
+
+Se describen a grandes rasgos el proceso de arranque de un sistema con Lihuen GNU/Linux, el funcionamiento de \textit{initramfs}\itref{3} y algunos conceptos de \textit{Aufs}\itref{4}.
+\end{abstract}
+
+\noindent \textbf{Keywords: }Linux, Debian, Ubuntu, Deep Freeze, Aufs, Lihuen, Initramfs, Lethe
+
+\section{Introducción}
+La Facultad de Informática cuenta con tres salas de computación para alumnos, donde las máquinas poseen doble booteo: sistemas Microsoft Windows XP y Lihuen GNU/Linux, que se desarrolla en la Facultad de Informática de la UNLP y se encuentra instalado en más de 60 equipos de dicha institución y en otras salas de computación de la Provincia de Buenos Aires. Estas salas tienen un uso académico y, en algunos casos, se requiere que los usuarios puedan instalar y probar herramientas durante las clases.
+
+Esta situación se puede generalizar a otros ambientes con equipos de uso público, como laboratorios, cibercafés o gabinetes de escuelas, en donde es deseable que las acciones de un usuario no afecten la configuración ni el software instalado en ese equipo. Esto impide que los cambios que realice afecten a futuros usuarios del mismo equipo.
+
+Existen diversos motivos por los cuales es necesario que los contenidos de los discos no se vean modificados en cada sesión de usuario, como impedir cambios locales en las configuraciones y la proliferación de iconos en el escritorio e incluso prevenir problemas de seguridad. Todo esto se podría solucionar si todos los cambios que realiza un usuario sobre el sistema se borraran al reiniciar la computadora. Este concepto de reinicio del sistema de archivos a su estado original es lo que llamamos congelar el disco.
+
+Este proyecto se inició  a partir del requerimiento efectuado por una cátedra de grado de la Facultad de Informática de la UNLP\footnote{http://www.info.unlp.edu.ar/index.php}; ellos solicitaron que los alumnos tuvieran permisos de superusuario o root en los equipos de la sala de PC, tanto en ambientes Microsoft Windows XP como Lihuen GNU/Linux.
+
+Para las plataformas de Microsoft, la solución del grupo de soporte de las salas consiste en utilizar el programa Deep Freeze\itref{5}, el cual provee esta funcionalidad. Ahora bien, el problema que se presentó fue encontrar una solución equivalente para Lihuen GNU/Linux. Existe una versión de Deep Freeze Linux\itref{5}\itref{6} para GNU/Linux, pero solamente funciona para la distribución Novell SuSE Linux Enterprise Desktop y de la misma forma que la versión para Windows se distribuye bajo los términos de licencias privativas, desconociéndose hasta el momento herramientas libres para congelar el estado del disco. Para cubrir esta necesidad surge el desarrollo de Lethe.
+
+El nombre Lethe \textipa{["lE:\textsubbridge{t}\super{h}E:]} proviene del griego antiguo y significa literalmente ``olvido''. En mitología griega, Lethe (en castellano Lete) es uno de los ríos de Hades y aquellos que bebían de sus aguas experimentaban un olvido completo.
+
+\section{Trabajos relacionados}
+En el relevamiento de aplicaciones efectuado con anterioridad al comienzo de este trabajo, se encontró un proyecto realizado por el equipo técnico del Laboratorio de Informática de la Facultad de Ciencias Económicas de la Universidad de Misiones\footnote{Al momento de realizar este documento, los archivos correspondientes a los scripts no estaban disponibles para su descarga.}\itref{7} basado en unos scripts desarrollados por Marco Antonio de Hoyos para Ciberlinux\itref{8}, los cuales consisten en guardar una copia comprimida del directorio \texttt{/home}, dentro de la cual se encuentran las carpetas de todos los usuarios. Cada vez que la computadora se apaga, el directorio \texttt{/home} se elimina, borrándose así los cambios hechos por los usuarios, configuraciones guardadas, etc; cuando se vuelve a iniciar, el directorio \texttt{/home} se descomprime, restaurándose así las configuraciones originales. Esta idea se desestimó debido a que no es una solución escalable. Además, solamente afecta al directorio \texttt{/home}. Cuando un usuario tiene privilegios de root puede modificar cualquier archivo del disco, no solo los archivos contenidos en su directorio personal. Si se extrapola la solución al problema actual debería guardarse una copia comprimida de todo el árbol de directorios (que puede llegar a tener varios gigabytes) y descomprimirla cada vez que la máquina arranca. Esto puede tomar varios minutos dependiendo de las aplicaciones instaladas en el sistema, incrementando el tiempo de arranque.
+
+La solución en la cual se basó este trabajo fue Rootaufs\itref{9}, desarrollado por Nicholas A. Schembri del State College de Pennsylvania. Rootaufs fue diseñado para minimizar el impacto de las escrituras sobre los dispositivos de disco flash de estado sólido, de algunos modelos de computadoras económicas como la \textbf{EeePC}\itref{10} o similares. Estos dispositivos se montan en modo sólo lectura y todos los cambios se realizan sobre un sistema de archivos temporal en memoria RAM, el cual es borrado tras reiniciar. Esta aproximación se viene usando hace años en sistemas Live CD\itref{11, p. 153.}, donde el directorio raíz, por la naturaleza del medio donde se almacena, es de sólo lectura.
+
+En la siguiente tabla se puede observar una comparación de las distintas alternativas evaluadas, poniendo énfasis en la licencia bajo la que se distribuye cada opción, la complejidad de instalación para cada aplicación y el tiempo extra necesario para completar el arranque del equipo.
+\\
+\\
+\tablename{ de características generales:}
+\begin{center}\begin{tabular}{|c|c|c|c|}
+\hline
+ Herramienta & Licencia & Instalación & Overhead\\ & & & Arranque\\
+\hline
+Lethe &  GPL & Simple & Mínimo\\
+\hline
+DeepFreeze &  Propietaria &  Simple & Mínimo\\
+\hline
+Rootaufs &  GPL &  Compleja & Mínimo\\
+\hline
+Scripts & & & \\  Ciberlinux &  GPL &  Compleja & Alto\\
+\hline
+\end{tabular}\end{center}
+A continuación se presenta una comparación de los sistemas operativos soportados por cada una de las alternativas.
+\\
+\\
+\tablename{ de sistemas operativos soportados:}
+\begin{center}\begin{tabular}{|c|c|c|c|c|}
+\hline
+ Herramienta & Debian & Ubuntu & Suse & Windows\\
+\hline
+Lethe &  Sí & Sí & No & No\\
+\hline
+DeepFreeze &  No & No & Sí & Sí \\
+\hline
+Rootaufs &  No &  Sí & No & No\\
+\hline
+Scripts & & & &\\  Ciberlinux & Sí & Sí & Sí & No\\
+\hline
+\end{tabular}\end{center}
+
+\section{Breve introducción a Lihuen GNU/Linux}
+Lihuen, la distribución GNU/Linux basada en Debian para la cual Lethe fue creado, está orientada principalmente al uso en escritorios educativos y oficinas administrativas. 
+
+El grupo de desarrollo de Lihuen, formado por miembros del LINTI de la Facultad de Informática de la UNLP, ha incluido en la distribución las aplicaciones de la rama \textit{main}\footnote{La rama main de Debian incluye únicamente paquetes cuyas licencias son compatibles con la GPL, a diferencia de las ramas \textit{contrib} y \textit{non-free} que incluyen paquetes con licencias más restrictivas.} de Debian estable, además de otras no soportadas en la rama estable, todas estas con licencia GPL. 
+
+Entre los objetivos del grupo se pueden citar la investigación, generación de documentación y realización de modificaciones a Lihuen para adaptarlo a las diversas necesidades locales, como el soporte para hardware nacional, la accesibilidad para personas con capacidades reducidas, la implementación de servidores de clientes livianos en escuelas, el soporte para netbooks, aplicaciones educativas y desarrollo de versiones \textit{live}, tanto CD como USB.
+
+\section{Descripción del arranque de Lihuen GNU/Linux}
+Debido a que el montado de las particiones se realiza durante el proceso de arranque del sistema, se hizo esencial el estudio en profundidad de éste. El proceso de arranque de Lihuen 3.0 GNU/Linux consta de cuatro etapas\itref{12}\itref{13}, dependiendo de qué parte del código esté corriendo en la CPU. 
+
+En la primer etapa, es el BIOS quien tiene el control de la CPU. Este se encarga de realizar los primeros chequeos de comprobación del hardware y, una vez que están listos, se le pasa el control al cargador de arranque, en este caso, GRUB2.
+
+En la segunda etapa, el cargador de arranque muestra un menú donde se pueden elegir el sistema operativo que se arrancará y los parámetros que se pasarán al kernel. Una vez seleccionado el sistema operativo, Lihuen en este caso, se cargan el kernel y la imagen \textit{initramfs} en memoria y se le pasa el control al siguiente módulo. Es importante comprender que tanto el kernel como la imagen \textit{initramfs} se encuentran en disco y, para que se puedan cargar a memoria, el cargador de arranque tiene que ser capaz de leer los sectores del disco donde estos se encuentran.
+
+La tercera etapa está a cargo del kernel que, una vez que está cargado en memoria, carga a su vez los módulos necesarios para que el sistema funcione desde la imagen \textit{initramfs}. La imagen \textit{initramfs} es un pseudo-sistema de archivos que funciona en RAM y que deja disponibles los módulos para el kernel sin que éste dependa de otros dispositivos como, por ejemplo, el disco rígido.
+Una vez cargados los módulos e inicializados los dispositivos virtuales (se cargan en \texttt{/dev} mediante \textit{udev}\itref{14}) se monta la partición raíz en \texttt{/root}. 
+Para esto, se ejecuta el script llamado \texttt{/init} contenido en la imagen initramfs. Desde este script se montan los sistemas de archivos temporales \texttt{/tmp}, \texttt{/proc}, \texttt{/sys} y crean los directorios \texttt{/dev} y \texttt{/root}. Se declaran numerosas variables de entorno y se realiza un análisis sintáctico de los argumentos pasados al kernel en la segunda etapa. Luego se ejecutan los scripts de las carpetas \texttt{/scripts/init-*} (donde posteriormente se instala Lethe). Estos scripts pueden hacer uso de las variables de entorno declaradas previamente. Por último, desde \texttt{/init} se trata de ejecutar el programa binario \texttt{/sbin/init}.
+
+La última etapa está a cargo de \texttt{/sbin/init}. Desde aquí se inician los servicios como la red o el entorno gráfico, ejecutando los scripts dentro del directorio \texttt{/etc/init.d/}.
+
+\section{Modificando initramfs}
+Para poder realizar modificaciones sobre la imagen initramfs se instaló el paquete de software \textit{initramfs-tools}. Este paquete provee las herramientas necesarias para crear y modificar las imágenes initramfs, entre otras utilidades. El paquete crea dos estructuras de directorios con raíz en\\ \texttt{/usr/share/initramfs-tools} y en \texttt{/etc/initramfs-tools}. Mediante el comando \texttt{update-initramfs -u} se reconstruye la imagen initramfs a partir de los cambios realizados en \texttt{/etc/initramfs-tools}. Los binarios utilizados en esta etapa del inicio del sistema están compilados y enlazados usando la biblioteca klibc, un subconjunto de glibc. Durante el desarrollo de este trabajo fue necesario incluir el binario de \textbf{fdisk}. Con este objetivo se creó un script ubicado en \texttt{/etc/initramfs-tools/hooks/copyfdisk} el cual llama a la función \texttt{copy\_exec()} durante la ejecución del comando \texttt{update-initramfs}. Dado que para disparar la ejecución de este script es necesario que al menos uno de los scripts contenidos en \texttt{/etc/initramfs-tools/scripts} dependa de éste, se agregó en el script de Lethe como una de las primeras líneas la sentencia \texttt{PREREQ="\null copyfdisk"}. Esto permitió la inclusión de \textbf{fdisk} dentro de la imagen initramfs, además de las librerías de las que depende para su correcto funcionamiento.
+
+\section{Funcionamiento e implementación de Lethe}
+Lethe se basa en la capacidad de Aufs para permitir el acceso a múltiples directorios a través de un único punto de montaje. Aufs fue en un primer momento una reimplementación de Unionfs\itref{15} versión 1.x, y aunque ahora se ha vuelto un proyecto totalmente distinto, conserva las características principales de Unionfs. Básicamente, es un sistema de archivos \textit{unificable apilable}; unificable porque el contenido de varios directorios (\textit{branches} o ramificaciones) tendrán la apariencia de uno solo mientras que el contenido físico de estos estará separado; apilable porque los branches se apilan uno sobre otro en el orden en que se van montando. Cada branch puede tener sus propios atributos; por ejemplo, si el branch es de sólo lectura o de lectura/escritura, si tiene control de errores o no, etc.
+
+Aufs cuenta con numerosas características.\footnote{Una lista completa puede encontrarse en la página del proyecto.\itref{4}} Para este proyecto sólo fueron necesarias las de unificar diferentes directorios y la de mezclar branches de sólo lectura y de lectura/escritura.
+
+Lethe es una modificación a rootaufs. Se trabajó sobre la forma de detectar la partición raíz tratando de generalizar el trabajo hecho por Schembri, debido a que Rootaufs funciona para casos muy particulares, es decir, sólo en dispositivos flash, de una partición raíz más una partición de intercambio, con unidades sda* (no contempla el uso de discos IDE hda*), en Ubuntu Linux y no en Debian GNU/Linux o Lihuen GNU/Linux.
+
+También se trabajó en la creación de un paquete Debian (.deb) que contiene un script de post instalación que deja Lethe configurado y funcionando. Dicho script modifica el menú de GRUB (en ambas versiones, Debian usa la versión 0.97 y Lihuen, la 1.96), actualiza el archivo initramfs automáticamente y si es instalado mediante la herramienta \textbf{Gdebi}\itref{16}, se resuelven e instalan los demás paquetes de los que depende Lethe, como \textbf{initramfs-tools} o \textbf{aufs-modules}.
+
+Lethe modifica la forma en la que se montan las particiones durante el inicio temprano (\textit{early boot}) del sistema. Mediante Aufs, se montan dos o más directorios como si fueran uno solo.
+
+Durante la tercera etapa del arranque: 
+\begin{itemize}
+ \item Durante la ejecución de \texttt{init}, se ejecutan los scripts alojados en el directorio \texttt{scripts/init-bottom/} en la cual se encuentra Lethe. 
+ \item Lethe crea tres directorios: \texttt{/aufs}, \texttt{/ro} y \texttt{/rw}.
+ \item Se monta \texttt{/rw} como un sistema de archivos temporal con \texttt{mount -t tmpfs aufs-tmpfs /rw}.
+ \item Se mueve la raíz real del sistema a \texttt{/ro} con  \texttt{mount --move \${rootmnt} /ro} (donde \texttt{\${rootmnt}} hace referencia a la raíz real \texttt{rootmnt=/root}).
+ \item Se monta \texttt{/aufs} como un sistema de archivos de aufs con dos branches, \texttt{/ro} como sólo lectura y \texttt{/rw} con lectura/escritura con el comando \texttt{mount -t aufs -o dirs=/rw:/ro=ro aufs /aufs}. 
+\end{itemize}
+Luego:
+\begin{itemize}
+ \item Se mueve \texttt{/rw} y \texttt{/ro} a \texttt{/aufs/rw} y \texttt{/aufs/ro} respectivamente con los comandos \texttt{mount --move /rw /aufs/rw} y \texttt{mount --move /ro /aufs/ro}. De esta manera, el sistema real de archivos queda oculto en \texttt{/aufs/ro}, el cual está montado como sólo lectura y todos los cambios que se realicen sobre el directorio \texttt{\${rootmnt}} se escribirán en el sistema de archivos temporal \texttt{/aufs/rw}.
+ \item Por último se mueve el directorio \texttt{/aufs} a \texttt{/root}, que será el directorio raíz una vez que haya terminado de arrancar el sistema. Esto se logra con el comando \texttt{mount -o move /aufs /root}.
+\end{itemize}
+Además el script corrige algunos archivos como el \texttt{/etc/mtab} y el \texttt{/aufs/etc/rc.local} para evitar errores y chequeos innecesarios durante el arranque.
+
+\section{Casos de prueba}
+Para probar los límites de Lethe se realizaron diferentes pruebas sobre una máquina virtual (QEMU + KVM\itref{17}) con 512 MB de memoria RAM y una partición de raíz de 9GB y una de intercambio de 1GB, con Lihuen GNU/Linux versión 3.0 recién instalado. Entre ellas, se ejecutaron como root los siguientes comandos:
+\begin{enumerate}
+ \item \texttt{ apt-get install gimp}:\newline
+\hspace*{0.5cm} Baja y descomprime el software Gimp, instalando varios megabytes en el disco.
+ \item \texttt{apt-get remove openoffice.org2}:\newline
+\hspace*{0.5cm} Borra la suite de ofimática OpenOffice.org2 liberando varios megabytes.
+ \item \texttt{apt-get upgrade}:\newline
+\hspace*{0.5cm} Baja y descomprime todas las actualizaciones para el sistema operativo disponibles.
+ \item \texttt{dd if=/dev/zero of=/nuevoarchivo}:\newline
+\hspace*{0.5cm} Llena el disco con un archivo de ceros. Esto debería agotar el espacio en disco.
+ \item \texttt{rm -rf /}:\newline
+\hspace*{0.5cm} Borra todos los archivos y directorios del sistema de archivos.
+ \item \texttt{cat /dev/zero > /dev/hda}:\newline
+\hspace*{0.5cm} Escribe ceros en el dispositivo de disco.
+\end{enumerate}
+
+Los resultados obtenidos, siempre con una sola partición raíz y una de intercambio fueron, en los casos 1, 2 y 3, que ninguna de las aplicaciones presentaba cambio alguno luego de reiniciar: Gimp no estaba instalado, OpenOffice.org2 seguía funcionando con normalidad y las actualizaciones no estaban instaladas.
+
+En cuanto a las pruebas 4 y 5, no degradaron el rendimiento del sistema durante la prueba como se esperaba, no hubo agotamiento de memoria RAM ni \textit{swap}. Luego de reiniciar, todo seguía funcionando con normalidad.
+
+La única prueba que comprometió la integridad de los datos del disco fue la nº 6. Como era de esperarse, aufs no impide que se escriban los bytes directamente en el dispositivo ya que trabaja a un nivel superior.
+
+Además se comprobó que los tiempos para completar el proceso de arranque del sistema no se incrementaron en forma apreciable.
+
+\section{Publicación de Lethe}
+A mediados del mes de mayo se publicó el proyecto en SourceForge\itref{18}, quedando disponibles desde sourceforge.net tanto el código fuente como el instalador para Debian (.deb). Pocos días después la comunidad comenzó a comentar las primeras experiencias. Mediante algunas de las consultas, se encontró el primer problema, Lethe no podía ser instalado directamente sobre Ubuntu debido a las dependencias existentes del instalador con algunos paquetes específicos de Lihuen y Debian. Para solucionar estos inconvenientes se creó una nueva versión de Lethe específica para Ubuntu que difiere de la original únicamente en las dependencias del paquete.
+
+Otro aporte importante provino de una universidad española. A través de este y otros aportes se detectó que en Ubuntu 8.xx y en Ubuntu 9.0x, tanto el servicio de impresión como el de red dejaban de funcionar si Lethe estaba ejecutándose.
+Después de investigar este y otros problemas similares, se llegó a la conclusión de que el problema era causado por SELinux\itref{19}, problema que no afecta ni a Debian ni a Lihuen, ya que estas distribuciones no traen este mecanismo de protección por defecto.
+
+Como los binarios \textbf{cupsd} (el demonio de impresión) y \textbf{nm-dhcp-client.action} (el demonio de conexión de red) se acceden a través de \texttt{/ro/usr/} a causa de Lethe y no a través de \texttt{/usr/} como era originalmente, SELinux deniega la ejecución. Se publicó una solución temporal en la página del proyecto (de la cual puede descargarse la última versión de Lethe)\footnote{http://sourceforge.net/projects/lethe/files/} y la solución definitiva estará incluida en la siguiente versión de Lethe para Ubuntu.
+
+\section{Trabajo a futuro}
+Para obtener un producto con todas las características deseadas, se espera que Lethe sea capaz de ``olvidar'' las modificaciones realizadas de las particiones, individual e independientemente unas de otras. Se sigue investigando esta posibilidad activamente.
+
+Otro item a tener en cuenta para que el producto tenga mayor aceptación, sobre todo en entornos no técnicos, es el desarrollo de una interfaz gráfica para su configuración, por ejemplo, para indicar cuales particiones se van a congelar y cuales no.
+
+La extensión del trabajo de implementación para otras distribuciones populares también es un camino a recorrer. La importancia de esto quedó demostrada por las consultas que se han recibido en el foro del proyecto y en diversas páginas especializadas\itref{20}\itref{21}. Para hacer esto posible serán necesarias ciertas modificaciones en los scripts para que sean compatibles con dichas distribuciones.
+
+% Si bien queda mucho trabajo por hacer, se cree que será posible tener una versión de prueba con las características arriba descriptas durante el transcurso del corriente año.
+
+\section{Conclusiones}
+
+Las herramientas como Lethe son necesarias en las salas de computación para alumnos de la Facultad porque permiten brindar la mayor libertad de uso posible, sin que esta libertad necesariamente complique las tareas de soporte y mantenimiento.
+
+Como se indica en la sección de los casos de prueba, se realizaron diversas pruebas en diferentes entornos y Lethe funcionó como se esperaba.
+
+Actualmente, se continúa investigando tanto para generalizar el uso de Lethe sobre Lihuen y Debian en otras configuraciones de instalación, como para extenderlo a otras distribuciones populares.
+
+El grupo de desarrollo de Lihuen GNU/Linux está integrado por alumnos y docentes de la Facultad, comprometidos con la difusión y promoción del uso de software libre y en el ejercicio de todas sus libertades\itref{22}. En este artículo no sólo se describe el desarrollo y funcionamiento de una herramienta de suma utilidad para el soporte de las salas de computación, sino que además refleja el grado de compromiso entre esta institución con la comunidad.
+
+\section{Agradecimientos}
+A Aldana Gómez Ríos y a María Beatríz García por hacer que este trabajo sea más claro.
+
+A Ernesto Mariani y a Carlos González Silva por su ayuda con las pruebas.
+
+Al Grupo de Soporte y Desarrollo de Lihuen/GNU Linux, Fernando Lopez, Sofía Martin, Atilio Gonzalez, Raúl Benencia y Aldo Vizcaino.
+\section{Referencias y enlaces de interés}
+
+\begin{enumerate}
+\item Página principal de Lihuen GNU/Linux\\
+\newblock {\texttt{http://lihuen.linti.unlp.edu.ar/index.php /Portada}}
+\item Página principal de Debian GNU/Linux\\
+\texttt{http://www.debian.org/} [Visitado el día 9 de enero de 2009]
+\item Man page of Initramfs-tools\\
+\texttt{http://home.ipe.uni-stuttgart.de/cgi-bin/ man/man2html?initramfs-tools+8} [Visitado el día 6 de enero de 2009].
+\item Aufs -- Another Unionfs\\
+\texttt{http://aufs.sourceforge.net/} [Visitado el día 28 de diciembre de 2008].
+\item Faronics Deep Freeze Windows Editions - Absolute System Integrity\\
+\texttt{http://www.faronics.com/html/deepfreeze.asp} [Visitado el día 28 de diciembre de 2008].
+\item Faronics Deep Freeze Linux Editions - Absolute System Integrity\\
+\texttt{http://www.faronics.com/html/dflinux.asp} [Visitado el día 28 de diciembre de 2008].
+\item Usuarios \& Técnicos de Software Libre - [Cómo] Congelando el escritorio de Linux, una alternativa al Deep Freeze\\
+\texttt{http://tecnicos.fce.unam.edu.ar/content/view/ 277/1/} [Visitado el día 3 de enero de 2009].
+\item Técnicos Linux Blog -- ¿Qué es CiberLinux?\\
+\texttt{http://tecnicoslinux.com.ar/web/node/125} [Visitado el día 3 de enero de 2009].
+\item AUFS (Another Union File System) Root File System On USB Flash - Community Ubuntu Documentation\\
+\texttt{https://help.ubuntu.com/community/aufsRootFile SystemOnUsbFlash} [Visitado el día 3 de enero de 2009].
+\item ASUS - EeePC Homepage\\
+\texttt{http://eeepc.asus.com/} [Visitado el día 6 de enero de 2009].
+\item Negus, Christopher. \textit{Live Linux CDs. Building and Customizing Bootables}. Crawfordsville, Prentice Hall, 2006.
+\item Inside the Linux Boot Process\\
+\texttt{http://www.ibm.com/developerworks/library/l -linuxboot/index.html} [Visitado el día 3 de enero de 2009].
+\item Linux Kernel Documentation :: early-userspace\\
+\texttt{http://www.mjmwired.net/kernel/Documentation/ early-userspace/} [Visitado el día 5 de enero de 2009].
+\item Kroah-Hartman, Greg. \textit{udev – A Userspace Implementation of devfs.} Reimpreso de los anales del Linux Symposium. Ottawa, 2003.
+\item Unionfs: A Stackable Unification File System\\
+\texttt{http://www.filesystems.org/project-unionfs.html}
+[Visitado el día 28 de diciembre de 2008].
+\item Gdebi Homepage\\
+\texttt{https://launchpad.net/gdebi}\
+[Visitado el día 3 de enero de 2009].
+\item Kernel-based Virtual Machine\\
+\texttt{http://www.linux-kvm.org} [Visitado el día 13 de marzo de 2009].
+\item Lethe - GPL Partition Freezing Software\\
+\texttt{http://sourceforge.net/projects/lethe/}
+\item SELinux\\
+\texttt{http://www.nsa.gov/research/selinux/index.shtml}
+[Visitado el día 19 de Julio de 2009]
+\item Artículo de Lethe en BitSignals\\
+\texttt{http://bitsignals.com/2009/06/29/lethe-el -deep-freeze-para-linux/} [Visitado el día 19 de julio de 2009].
+\item Artículo de Lethe en Comunidad GNU\\
+\texttt{http://www.comunidadgnu.com.ar/noticias/ 3956-lethe-01-el-deep-freeze-de-lihuen-gnulinux} [Visitado el día 19 de julio de 2009].
+\item Definición de Software Libre\\
+\texttt{http://www.gnu.org/philosophy/free-sw.es.html} [Visitado el día 20 de Julio de 2009]
+\end{enumerate}
+
+\end{document}
