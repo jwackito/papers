@@ -16,7 +16,7 @@
 \\LINTI. Facultad de Informática, Universidad Nacional de La Plata.
 \\La Plata, B1900ASD, ARGENTINA
 }
-\title{}
+\title{Reutilización de motores de paso para motorización de una montura equatorial de telescopio}
 
 \hyphenation{}
 \begin{document}
@@ -28,29 +28,58 @@
 Muchos de los componentes de impresoras, discos y escaners que se descartan no han llegado al final de su vida util y siguen
 funcionando.
 Este trabajo trata sobre la reutilización de los motores paso a paso de equipos como los mencionados anteriormente que hayan
-sido descartados, para tareas de presición en astronomía aficionada, concretamente para la motorización de la montura de un
-telescopio y para el control del foco.
+sido descartados, para tareas de precisión en astronomía aficionada, concretamente para la motorización de una montura
+equatorial de un telescopio y para el control del foco del telescopio.
 \end{abstract}
 
-\noindent \textbf{Keywords: } 
+\noindent \textbf{Keywords: } motor de paso, 
 
 \section{Introducción}
-Los motores de paso, también conocidos como steppers o motores paso a paso (PaP), son comunmente 
+Los motores de paso, también conocidos como steppers o motores paso a paso (PaP), son comúnmente usados en impresoras para
+mover los inyectores y cabezales de impresión o en escáneres para mover la lámpara de escaneo. La particularidad de estos
+motores es que sus movimientos son discretos y repetibles en una determinada cantidad de grados. Cada paso se produce por la
+activación de las bobinas del motor que funcionan como electroimanes, atrayendo uno de los polos del rotor. Esto permite
+controlar el avance o retroceso del motor en forma precisa activando o desactivando las bobinas mediante pulsos controlados
+mediante un programa.
 \section{Trabajos relacionados}
+Los sistemas de motorización de monturas para telescopio comerciales que se consiguen en el país rondan los 350 \$AR. Esto
+es solo para motorizar la montura con el fin de contrarrestar el movimiento de rotación terrestre, ya que los sistemas
+motorizados de guiado (comúnmente conocidos como GOTO) son mucho más caros. Un enfocador electrónico ronda al rededor de los
+320 \$AR. El kit GOTO permite seleccionar el punto en el cielo que se desea observar, entrando un numero de catálogo que hace
+referencia a una base de datos dentro del dispositivo. Un GOTO típico tiene una base de datos con entre 30000 y 60000 objetos
+celestes aunque la mayoría permite agregar objetos por Internet.
+\section{Los motores de paso}
+Los motores de paso suelen utilizarce en impresoras para mover los cabezales de impresión, en escáneres para mover la
+lámpara, en lectoras y grabadoras de CDs y DVDs para mover el cabezal laser y en ejes de discos rígidos para mover los
+platos, entre otros usos.
 
-\section{Otra sección}
-%desarrollo, más de una sección.
+Un motor de paso es un motor eléctrico sin escobillas 
+A diferencia de los motores de corriente continua o de los de corriente alterna, los motores de paso hacen girar el eje en
+forma discreta en una cantidad de grados igual para cada paso. Así, un motor de 1,8 grados por paso tendrá 200 pasos por
+revolución.
 
+
+
+\section{Problemas con los motores}
+\section{La plataforma Arduino}
+\section{El foco}
+\section{La montura}
 \section{Casos de prueba}
 
 \section{Trabajo a futuro}
 
 \section{Conclusiones}
+\section{Glosario}
+\begin{enumerate}
+ \item[\texttt{escobilla}:] Un dispositivo que conduce la corriente entre alambres estacionarios y partes móviles, usado
+comúnmente en motores, generadores y alternadores eléctricos. Conocidas en inglés como \textit{brushes}.
+ \item[\texttt{estator}:] Una parte fija o estacionaria al rededor de la cual gira un rotor. En inglés, \textit{stator}.
+ \item[\texttt{rotor}:] La parte que gira de una máquina eléctrica.
+\end{enumerate}
 
 \section{Agradecimientos}
 
 \section{Referencias y enlaces de interés}
-
 \begin{enumerate}
 \item Página principal de Lihuen GNU/Linux\\
 \newblock {\texttt{http://lihuen.linti.unlp.edu.ar/index.php /Portada}}\\[Visitado el día 9 de enero de 2009]
