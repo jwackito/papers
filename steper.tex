@@ -16,7 +16,7 @@
 \\LINTI. Facultad de Informática, Universidad Nacional de La Plata.
 \\La Plata, B1900ASD, ARGENTINA
 }
-\title{Reutilización de motores de paso para motorización de una montura equatorial de telescopio}
+\title{Reutilización de motores de paso para motorización de una montura ecuatorial de telescopio}
 
 \hyphenation{}
 \begin{document}
@@ -25,11 +25,11 @@
 \sloppy
 
 \begin{abstract}
-Muchos de los componentes de impresoras, discos y escaners que se descartan no han llegado al final de su vida util y siguen
-funcionando.
+Muchos de los componentes de impresoras, discos y escáneres que se descartan no han llegado al final de su vida útil y
+siguen funcionando.
 Este trabajo trata sobre la reutilización de los motores paso a paso de equipos como los mencionados anteriormente que hayan
 sido descartados, para tareas de precisión en astronomía aficionada, concretamente para la motorización de una montura
-equatorial de un telescopio y para el control del foco del telescopio.
+ecuatorial de un telescopio y para el control del foco del telescopio.
 \end{abstract}
 
 \noindent \textbf{Keywords: } motor de paso, 
@@ -44,45 +44,78 @@ mediante un programa.
 \section{Trabajos relacionados}
 Los sistemas de motorización de monturas para telescopio comerciales que se consiguen en el país rondan los 350 \$AR. Esto
 es solo para motorizar la montura con el fin de contrarrestar el movimiento de rotación terrestre, ya que los sistemas
-motorizados de guiado (comúnmente conocidos como GOTO) son mucho más caros. Un enfocador electrónico ronda al rededor de los
-320 \$AR. El kit GOTO permite seleccionar el punto en el cielo que se desea observar, entrando un numero de catálogo que hace
+motorizados de guiado (comúnmente conocidos como GOTO) son mucho más caros. Un enfocador electrónico ronda alrededor de los
+320 \$AR. El kit GOTO permite seleccionar el punto en el cielo que se desea observar, entrando un número de catálogo que hace
 referencia a una base de datos dentro del dispositivo. Un GOTO típico tiene una base de datos con entre 30000 y 60000 objetos
-celestes aunque la mayoría permite agregar objetos por Internet.
+celestes, aunque la mayoría permite agregar objetos por Internet.
 \section{Los motores de paso}
-Los motores de paso suelen utilizarce en impresoras para mover los cabezales de impresión, en escáneres para mover la
-lámpara, en lectoras y grabadoras de CDs y DVDs para mover el cabezal laser y en ejes de discos rígidos para mover los
+Los motores de paso suelen utilizarse en impresoras para mover los cabezales de impresión, en escáneres para mover la
+lámpara, en lectoras y grabadoras de CDs y DVDs para mover el cabezal láser y en ejes de discos rígidos para mover los
 platos, entre otros usos.
 
-Un motor de paso es un motor eléctrico sin escobillas 
-A diferencia de los motores de corriente continua o de los de corriente alterna, los motores de paso hacen girar el eje en
-forma discreta en una cantidad de grados igual para cada paso. Así, un motor de 1,8 grados por paso tendrá 200 pasos por
-revolución.
+Un motor de paso es un motor eléctrico sin escobillas, sincrónico, que divide la rotación de su eje o rotor en un determinado
+número de pasos\itref{1}. A diferencia de los motores de corriente continua o de los de corriente alterna, los motores de
+paso hacen girar el eje en forma discreta en una cantidad de grados igual para cada paso. Así, un motor de 1,8 grados por
+paso tendrá 200 pasos por revolución.
 
+Internamente, los motores de paso poseen electroimanes dentados dispuestos alrededor de un rotor con una rueda de hierro u
+otro material magnético, también dentada. Los electroimanes son energizados en una determinada secuencia mediante un
+circuito generador de pulsos o un microcontrolador. Para hacer que el eje del motor gire en un determinado sentido, uno de
+los electroimanes es activado por un pulso, atrayendo hacia sus dientes a los dientes del rotor. Cuando los dientes del
+rotor se alinean con respecto al primer electroimán, quedan ligeramente desalineados con respecto al siguiente electroimán.
+Así, cuando se activa el segundo electroimán y se desactiva el primero, el rotor gira levemente para alinearse con los
+dientes del segundo electroimán, produciendo como resultado un paso.
 
+Las características principales de un motor de paso son:
+\begin{enumerate}
+ \item Los motores de paso, mientras están en funcionamiento, necesitan permanentemente ser alimentados con electricidad.
+Comúnmente funcionan con entre 5 y 24 V.
+ \item A medida que la velocidad de rotación aumenta, el torque disminuye. La mayoría de los motores exhiben su mayor torque
+cuando están conectados a una fuente de alimentación eléctrica y están detenidos. Claro que un motor con mucho torque
+detenido no es de mucha utilidad: el torque es de mayor utilidad cuando el motor está girando.
+ \item Es posible aumentar el torque del motor limitando la corriente y aumentando el voltaje que entra al motor. Este tipo
+de circuitos se conoce como \textit{chopper circuit}. Existen varias soluciones comerciales que implementan estos circuitos.
+ \item Los motores de paso vibran más que otros tipos de motores. Esto se debe a que un paso suele hacer saltar el eje de
+una posición a otra y el movimiento no es continuo.
+ \item Esta vibración es importante debido a que a ciertas velocidades el motor puede perder torque o incluso cambiar de
+dirección.
+ \item Existen técnicas que mitigan los problemas producidos por las vibraciones y la resonancia.
+ \item Los motores con un número grande de fases exhiben una operación más suave que aquellos con pocas fases.
+\end{enumerate}
+Internamente y según la fabricación del rotor, los motores de paso se dividen en motores de imán permanentemente (PM), de
+reluctancia variable (VR) o híbridos. Los motores de imán permanentemente tienen en su rotor un imán y opera atrayendo o
+repeliendo los dientes del rotor hacia los electroimanes del estator. Los motores de reluctancia variable tienen un rotor de
+hierro y se basan en el principio de que la mínima reluctancia se produce en un mínimo espacio. Por lo tanto los puntos del
+rotor son atraidos hacia los electroimanes del estator. Los motores híbridos usan una combinación de las dos técnicas para
+obtener máxima potencia en un espacio de empaquetado más reducido.
 
+Para los motores de dos fases, que comúnmente se encuentran en hardware obsoleto, existen dos disposiciones de bobinado para
+los electroimanes. De esta manera, se los puede clasificar en motores unipolares o bipolares.
+
+Los motores unipolares tienen dos bobinados por fase, uno por cada dirección del campo magnético. Esto hace a los motores
+unipolares muy fáciles de controlar, debido a que el cambio de polo de una bobina puede hacerse sin invertir la dirección de
+la corriente. En circuitos para controlar los motores unipolares, generalmente alcanza con un transistor por bobina.
 \section{Problemas con los motores}
 \section{La plataforma Arduino}
 \section{El foco}
 \section{La montura}
 \section{Casos de prueba}
-
 \section{Trabajo a futuro}
-
 \section{Conclusiones}
 \section{Glosario}
 \begin{enumerate}
  \item[\texttt{escobilla}:] Un dispositivo que conduce la corriente entre alambres estacionarios y partes móviles, usado
-comúnmente en motores, generadores y alternadores eléctricos. Conocidas en inglés como \textit{brushes}.
+comúnmente en motores, generadores y alternadores eléctricos. Conocidas en inglés como \textit{brush}.
  \item[\texttt{estator}:] Una parte fija o estacionaria al rededor de la cual gira un rotor. En inglés, \textit{stator}.
- \item[\texttt{rotor}:] La parte que gira de una máquina eléctrica.
+ \item[\texttt{rotor}:] La parte que gira en torno a un eje en una máquina eléctrica.
+ \item[\texttt{torque}:] Fuerza que puede hacer el motor antes de girar en falso.
 \end{enumerate}
 
 \section{Agradecimientos}
 
 \section{Referencias y enlaces de interés}
 \begin{enumerate}
-\item Página principal de Lihuen GNU/Linux\\
-\newblock {\texttt{http://lihuen.linti.unlp.edu.ar/index.php /Portada}}\\[Visitado el día 9 de enero de 2009]
+\item Stepper motor\newline
+\margin \texttt{http://en.wikipedia.org/wiki/Stepper\_motor}\\\margin [Visitado el día 29 de junio de 2010]
 \end{enumerate}
-
 \end{document}

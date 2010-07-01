@@ -1,0 +1,70 @@
+\documentclass[final,narroweqnarray,inline,twoside]{ieee}
+
+\usepackage{ucs}
+\usepackage[utf8x]{inputenc}
+\usepackage[spanish]{babel}
+\usepackage{fontenc}
+\usepackage{graphicx}
+\usepackage{textcomp}
+% \usepackage{tipa}
+
+\newcommand{\itref}[1]{[{#1}]}
+%uso: \itref{1}
+%1 es el número de la referencia
+
+\author{Joaquín Bogado\\ Andrea Gómez del Mónaco
+\\LINTI. Facultad de Informática, Universidad Nacional de La Plata.
+\\La Plata, B1900ASD, ARGENTINA
+}
+\title{Modificando lxrandr para que guarde los cambios al reiniciar}
+
+\hyphenation{}
+\begin{document}
+\pagenumbering{none}
+\maketitle
+\sloppy
+
+\begin{abstract}
+En entornos LXDE, la aplicación lxrandr sirve para ajustar la tasa de refresco y la resolución del monitor. Esta herramienta
+es una interfaz gráfica para el programa xrandr y no permite guardar las configuraciones y los cambios se pierden una vez
+que se reinicia la sesión. Este trabajo incluye una posible modificación al programa para quelas modificaciones sean
+permanentes entre inicios de sesión.
+\end{abstract}
+
+\noindent \textbf{Keywords: } lxde, lxrandr, xrandr, configuración del monitor
+
+\section{Introducción}
+LXDE es un entorno gráfico liviano para máquinas de escasos recursos que corre sobre el sistema Xwindow. LXDE provee una
+interfaz gráfica para el comando xrandr llamada lxrandr que permite cambiar tanto la resolución como la tasa de refresco del
+monitor en tiempo real. El programa es muy sencillo y esta escrito en C haciendo uso de las librerías gráficas GTK. Debido
+su simplicidad, no contempla la posibilidad de guardar las configuraciones. Así, para forzar una configuración a 800x600 hay
+que correr el programa cada vez. Este trabajo explica como modificar el código de lxrandr para que los cambios sean
+permanentes entre inicios de sesión. 
+
+\section{Funcionamiento de lxrandr}
+\texttt{lxrandr} hace un llamado a xrandr para pedir los modos (tanto resoluciones como tasas de refresco) soportados por la
+placa de video y el monitor mediante la función \texttt{nombre\_de\_la\_función()}. Una vez cargados los modos, los muestra
+a través de un menú contextual. Una vez que se selecciona el modo deseado, cuando se presiona el boton aceptar, se llama a
+la función \texttt{nombre\_de\_la\_funcion\_para\_setear\_los\_modos()} que invoca al comando xrandr con los parámetros
+adecuados para setear ese modo. De esta manera, al iniciar de nuevo la sesión, los cambios no se ven reflejados debido a que
+se cargan los modos por defecto definidos para Xorg.
+
+\section{Guardando los cambios}
+La idea de este trabajo es modificar la función \texttt{nombre\_de\_la\_funcion\_para\_setear\_los\_modos()} de forma tal
+que guarde los cambios de los modos seleccionados.
+\section{Casos de prueba}
+
+\section{Trabajo a futuro}
+
+\section{Conclusiones}
+
+\section{Agradecimientos}
+
+\section{Referencias y enlaces de interés}
+
+\begin{enumerate}
+\item Página principal de Lihuen GNU/Linux\\
+\newblock {\texttt{http://lihuen.linti.unlp.edu.ar/index.php /Portada}}\\[Visitado el día 9 de enero de 2009]
+\end{enumerate}
+
+\end{document}
