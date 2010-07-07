@@ -43,15 +43,37 @@ permanentes entre inicios de sesión.
 
 \section{Funcionamiento de lxrandr}
 \texttt{lxrandr} hace un llamado a xrandr para pedir los modos (tanto resoluciones como tasas de refresco) soportados por la
-placa de video y el monitor mediante la función \texttt{nombre\_de\_la\_función()}. Una vez cargados los modos, los muestra
-a través de un menú contextual. Una vez que se selecciona el modo deseado, cuando se presiona el boton aceptar, se llama a
-la función \texttt{nombre\_de\_la\_funcion\_para\_setear\_los\_modos()} que invoca al comando xrandr con los parámetros
-adecuados para setear ese modo. De esta manera, al iniciar de nuevo la sesión, los cambios no se ven reflejados debido a que
-se cargan los modos por defecto definidos para Xorg.
+placa de video y el monitor mediante la función \texttt{get\_xrandr\_info()}. Una vez cargados los modos, los muestra
+a través de un menú contextual. Una vez que se selecciona el modo deseado, cuando se presiona el botón aceptar, se llama a
+la función \texttt{set\_xrandr\_info()} que invoca al comando xrandr con los parámetros adecuados para setear ese modo.
+al iniciar de nuevo la sesión, los cambios no se ven reflejados debido a que se cargan los modos por defecto definidos
+para Xorg.
 
 \section{Guardando los cambios}
-La idea de este trabajo es modificar la función \texttt{nombre\_de\_la\_funcion\_para\_setear\_los\_modos()} de forma tal
-que guarde los cambios de los modos seleccionados.
+La idea de este trabajo es modificar la función \texttt{set\_xrandr\_info()} de forma tal que guarde los cambios de los modos
+seleccionados cuando se presiona el botón aceptar. Esto se puede lograr guardando el comando xrandr con sus argumentos en un
+script que se ejecute cada inicio de sesión. Este script estará guardado la carpeta personal de usuario. De esta manera:
+\begin{enumerate}
+ \item Los cambios son propios del usuario. Diferentes usuarios pueden setear diferentes configuraciones para la pantalla.
+ \item No es necesario tener privilegios de administrador para cambiar la resolución de la pantalla.
+\end{enumerate}
+
+
+\section{Primera propuesta}
+Los cambios propuestos para la función \texttt{set\_xrandr\_info()} detectan la ubicación de la carpeta home mediante el uso
+de la función getenv(). Cada vez que se inicia sesión, el archivo \texttt{\$HOME/.profile} es invocado. Una posible solución
+sería bajar el contenido de la variable \texttt{cmd->str} directamente al archivo \texttt{\$HOME/.profile}. 
+
+El problema de esta solución es que cada vez que se llame a la función \texttt{set\_xrandr\_info()} se agregará una llamada
+a xrandr, muy posiblemente con valores distintos cada vez. Para evitar este inconveniente se puede realizar una busqueda en
+el archivo \texttt{\$HOME/.profile} por una llamada a xrandr y sobreescribirla.
+
+\section{Otra solución}
+Para evitar las búsquedas dentro del archivo \texttt{\$HOME/.profile} se puede agregar una sola vez una línea que ejecute un
+script en \texttt{\$HOME/.config/} donde están las configuraciones de LXDE. De esta forma, cada vez que se llama a la función
+\texttt{set\_xrandr\_info()} se modifica solamente el script y no el archivo \texttt{\$HOME/.profile}.
+
+
 \section{Casos de prueba}
 
 \section{Trabajo a futuro}
@@ -64,7 +86,7 @@ que guarde los cambios de los modos seleccionados.
 
 \begin{enumerate}
 \item Página principal de Lihuen GNU/Linux\\
-\newblock {\texttt{http://lihuen.linti.unlp.edu.ar/index.php /Portada}}\\[Visitado el día 9 de enero de 2009]
+\margin \texttt{http://lihuen.linti.unlp.edu.ar/index.php/Portada}}\\\margin[Visitado el día 9 de enero de 2009]
 \end{enumerate}
 
 \end{document}

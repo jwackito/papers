@@ -32,7 +32,7 @@ sido descartados, para tareas de precisión en astronomía aficionada, concretam
 ecuatorial de un telescopio y para el control del foco del telescopio.
 \end{abstract}
 
-\noindent \textbf{Keywords: } motor de paso, 
+\noindent \textbf{Keywords: } motor de paso, arduino, freeduino, reutilización de residuos tecnológicos
 
 \section{Introducción}
 Los motores de paso, también conocidos como steppers o motores paso a paso (PaP), son comúnmente usados en impresoras para
@@ -91,10 +91,37 @@ obtener máxima potencia en un espacio de empaquetado más reducido.
 
 Para los motores de dos fases, que comúnmente se encuentran en hardware obsoleto, existen dos disposiciones de bobinado para
 los electroimanes. De esta manera, se los puede clasificar en motores unipolares o bipolares.
-
+\section{Los motores unipolares}
 Los motores unipolares tienen dos bobinados por fase, uno por cada dirección del campo magnético. Esto hace a los motores
 unipolares muy fáciles de controlar, debido a que el cambio de polo de una bobina puede hacerse sin invertir la dirección de
 la corriente. En circuitos para controlar los motores unipolares, generalmente alcanza con un transistor por bobina.
+
+En este tipo de motores, uno de los extremos del bobinado de cada fase se denomina cable común (el extremo que se conecta al
+polo positivo a entre 5 y 12 V) y es compartido por todas las bobinas de la fase. Esta configuración muestra tres cables por
+fase, es decir, seis cables para un motor de dos fases. Generalmente, los cables comunes de cada fase están unidos
+internamente, por lo que no es difícil encontrar motores unipolares con cinco cables en lugar de seis.
+
+\section{Los motores bipolares}
+Los motores bipolares tienen un bobinado por fase en lugar de dos, como tienen los motores unipolares. En este tipo de
+motores, por lo tanto, para invertir el campo magnético es necesario invertir la dirección de la corriente eléctrica que
+pasa por la bobina. Esto hace que los circuitos para controlar este tipo de motores sean más complejos. Estos motores
+presentan generalmente cuatro cables, dos por fase, ninguno común.
+
+Las desventajas en cuando a la complejidad de los circuitos para manejarlos se ven atenuadas por los siguientes factores,
+algunos de ellos en relación con los motores unipolares:
+\begin{enumerate}
+ \item Al usar la inversión de corriente eléctrica para cambiar la polaridad de las bobinas, este tipo de motores usa la
+mitad del cable de cobre para el bobinado que un motor unipolar. 
+ \item Los motores unipolares energizan la mitad de la bobina cada vez, por lo tanto son menos eficientes.
+ \item Un motor bipolar del mismo tamaño que un unipolar tiene más torque %mejorar esta idea (a mas vueltas de la bobina,
+% mayor es el  campo magnético, ergo un motor bipolar con x cantidad de alambres por bobina tiene el doble de alambre util
+% en una bobina, por lo tanto tiene ¿el doble de torque??
+\end{enumerate}
+
+
+
+
+
 \section{Problemas con los motores}
 \section{La plataforma Arduino}
 \section{El foco}
