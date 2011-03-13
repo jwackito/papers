@@ -16,7 +16,7 @@
 \\LINTI. Facultad de Informática, Universidad Nacional de La Plata.
 \\La Plata, B1900ASD, ARGENTINA
 }
-\title{Modificando lxrandr para que guarde los cambios al reiniciar}
+\title{Modificando lxrandr para guardar los cambios al reiniciar}
 
 \hyphenation{}
 \begin{document}
@@ -50,9 +50,10 @@ al iniciar de nuevo la sesión, los cambios no se ven reflejados debido a que se
 para Xorg.
 
 \section{Guardando los cambios}
-La idea de este trabajo es modificar la función \texttt{set\_xrandr\_info()} de forma tal que guarde los cambios de los modos
-seleccionados cuando se presiona el botón aceptar. Esto se puede lograr guardando el comando xrandr con sus argumentos en un
-script que se ejecute cada inicio de sesión. Este script estará guardado la carpeta personal de usuario. De esta manera:
+La idea de este trabajo es modificar la función \texttt{set\_xrandr\_info()} de forma tal que se guarden los cambios de los
+modos seleccionados cuando se presiona el botón aceptar. Esto se puede lograr guardando el comando xrandr con sus argumentos
+en un script que se ejecute cada inicio de sesión. Este script estará guardado la carpeta personal de usuario. De esta
+manera:
 \begin{enumerate}
  \item Los cambios son propios del usuario. Diferentes usuarios pueden setear diferentes configuraciones para la pantalla.
  \item No es necesario tener privilegios de administrador para cambiar la resolución de la pantalla.
@@ -68,23 +69,38 @@ El problema de esta solución es que cada vez que se llame a la función \texttt
 a xrandr, muy posiblemente con valores distintos cada vez. Para evitar este inconveniente se puede realizar una busqueda en
 el archivo \texttt{\$HOME/.profile} por una llamada a xrandr y sobreescribirla.
 
-\section{Otra solución}
-Para evitar las búsquedas dentro del archivo \texttt{\$HOME/.profile} se puede agregar una sola vez una línea que ejecute un
-script en \texttt{\$HOME/.config/} donde están las configuraciones de LXDE. De esta forma, cada vez que se llama a la función
-\texttt{set\_xrandr\_info()} se modifica solamente el script y no el archivo \texttt{\$HOME/.profile}.
+Otra solución para evitar las búsquedas dentro del archivo \texttt{\$HOME/.profile} puede consistir en agregar una sola vez
+una línea que ejecute un script en \texttt{\$HOME/.config/} donde están las configuraciones de LXDE. De esta forma, cada vez
+que se llama a la función \texttt{set\_xrandr\_info()} se modifica solamente el script y no el archivo
+\texttt{\$HOME/.profile}.
 
+\section{La solución final}
+El archivo \texttt{\$HOME/.profile} es analizado y cargado cada vez que un usuario inicia sesión en la computadora. Esto
+vale también para cuando un usuario inicia sesión en una terminal real, sin entorno gráfico. Establecer la resolución de la
+pantalla con xrand en una consola donde la variable DISPLAY no esté definida devendrá en un error. Por lo tanto es necesario
+preguntar en este archivo con un \texttt{if} por si el valor de la variable en cuestión esta definido y en caso negativo, no
+hacer el llamdo a al script que corre xrandr.
 
 \section{Casos de prueba}
-
+Se comprobó el funcionamiento de las modificaciones sobre Debian Lenny con LXDE haciendo modificaciones sobre la versión
+lxrandr-0.1+svn20080716 y Debian Squeeze con LXDE aplicando las mismas modificaciones sobre la versión lxrandr-0.1.1-2.
+Para los usuarios \texttt{prueba1} y \texttt{prueba2}, se configuraron resoluciones diferentes. Se pudo verificar que los
+cambios se guardaban independientemente para ambos usuarios usando tanto monitores CRT como LCD. 
+También se realizaron pruebas con dos monitores, pero en este caso la aplicación falló. Se pudo comprobar que los fallos no
+se debieron a las modificaciones introducidas y que también estaban presentes en las versiones de \textbf{lxrandr} sin
+modificar. 
 \section{Trabajo a futuro}
 
 \section{Conclusiones}
-
+En ambos casos los cambios en la configuración de la resolución de la pantalla y la frecuencia de refresco se guardaron
+satisfactoriamente para los usuarios de prueba.
 \section{Agradecimientos}
 
 \section{Referencias y enlaces de interés}
 
 \begin{enumerate}
+\item Página principal de Lihuen GNU/Linux\\
+\margin \texttt{http://lihuen.linti.unlp.edu.ar/index.php/Portada}}\\\margin[Visitado el día 9 de enero de 2009]
 \item Página principal de Lihuen GNU/Linux\\
 \margin \texttt{http://lihuen.linti.unlp.edu.ar/index.php/Portada}}\\\margin[Visitado el día 9 de enero de 2009]
 \end{enumerate}

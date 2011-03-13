@@ -90,40 +90,94 @@ rotor son atraidos hacia los electroimanes del estator. Los motores híbridos us
 obtener máxima potencia en un espacio de empaquetado más reducido.
 
 Para los motores de dos fases, que comúnmente se encuentran en hardware obsoleto, existen dos disposiciones de bobinado para
-los electroimanes. De esta manera, se los puede clasificar en motores unipolares o bipolares.
+los electroimanes. De esta manera, se los puede clasificar en motores unipolares o bipolares. Cabe recordar que la fuerza
+del campo magnetico ejercida por el electroimán del las bobinas depende directamente del largo del alambre de cobre, de la
+cantidad de vueltas de la bobina y de la cantidad de corriente con la que se alimenta al motor.
+Existe fórmulas precisas para calcular la intensidad del campo mágnetico de una bobina, pero al alcance del trabajo
+satizface saber que a mayor cantidad de alambre en una bobina y a mayor voltaje de alimentación de la bobina,
+mayor será el campo magnético generado, lo que se traduce en un mayor torque del motor.
+
+Las configuraciones ángulos típicas de cada paso son 0,72°; 1,8°; 3,6°; 7,5°; 15°, 45° y hasta 90° aunque se pueden obtener
+pasos más pequeños usando "medios pasos" (half step) o "micropasos" (microstep).
+
 \section{Los motores unipolares}
 Los motores unipolares tienen dos bobinados por fase, uno por cada dirección del campo magnético. Esto hace a los motores
 unipolares muy fáciles de controlar, debido a que el cambio de polo de una bobina puede hacerse sin invertir la dirección de
 la corriente. En circuitos para controlar los motores unipolares, generalmente alcanza con un transistor por bobina.
 
-En este tipo de motores, uno de los extremos del bobinado de cada fase se denomina cable común (el extremo que se conecta al
+Uno de los extremos del bobinado de cada fase se denomina cable común (el extremo que se conecta al
 polo positivo a entre 5 y 12 V) y es compartido por todas las bobinas de la fase. Esta configuración muestra tres cables por
 fase, es decir, seis cables para un motor de dos fases. Generalmente, los cables comunes de cada fase están unidos
 internamente, por lo que no es difícil encontrar motores unipolares con cinco cables en lugar de seis.
+\begin{figure}[h]
+ \centering
+ \includegraphics{./unipolar.png}
+ % unipolar.svg: 249x261 pixel, 72dpi, 8.78x9.21 cm, bb=0 0 249 261
+ \caption{Esquema de conexionado de un motor unipolar}
+ \label{fig: Esquema de conexionado de un motor unipolar}
+\end{figure}
+
+Un detalle importante a tener en cuenta cuando se trabaja con motores reciclados (los cuales generalmente no cuentan con
+hojas de datos) es como averiguar cual es el cable común y cuales pertenecen a que bobina.
 
 \section{Los motores bipolares}
 Los motores bipolares tienen un bobinado por fase en lugar de dos, como tienen los motores unipolares. En este tipo de
-motores, por lo tanto, para invertir el campo magnético es necesario invertir la dirección de la corriente eléctrica que
-pasa por la bobina. Esto hace que los circuitos para controlar este tipo de motores sean más complejos. Estos motores
-presentan generalmente cuatro cables, dos por fase, ninguno común.
+motores, por lo tanto, para invertir la orientación del campo magnético es necesario invertir la dirección de la corriente
+eléctrica que pasa por la bobina. Esto hace que los circuitos para controlar este tipo de motores sean más complejos. Estos
+motores presentan generalmente cuatro cables, dos por fase, ninguno común.
 
-Las desventajas en cuando a la complejidad de los circuitos para manejarlos se ven atenuadas por los siguientes factores,
-algunos de ellos en relación con los motores unipolares:
-\begin{enumerate}
- \item Al usar la inversión de corriente eléctrica para cambiar la polaridad de las bobinas, este tipo de motores usa la
-mitad del cable de cobre para el bobinado que un motor unipolar. 
- \item Los motores unipolares energizan la mitad de la bobina cada vez, por lo tanto son menos eficientes.
- \item Un motor bipolar del mismo tamaño que un unipolar tiene más torque %mejorar esta idea (a mas vueltas de la bobina,
-% mayor es el  campo magnético, ergo un motor bipolar con x cantidad de alambres por bobina tiene el doble de alambre util
-% en una bobina, por lo tanto tiene ¿el doble de torque??
-\end{enumerate}
+Como se usa solamente un bobinado por fase (y no dos como en los motores unipolares), la cantidad de alambre de cada bobina
+es menor. Así, un motor bipolar con igual cantidad de alambre en cada bobina que un motor unipolar generará un campo
+magnético mayor dada una misma intensidad de corriente eléctrica, debido a que en un motor unipolar se usa solamente la mitad
+de la bobina para inducir una dirección del campo magnético.
 
-
-
-
+\begin{figure}[h]
+ \centering
+ \includegraphics{./bipolar.png}
+ % bipolar.svg: 249x261 pixel, 72dpi, 8.78x9.21 cm, bb=0 0 249 261
+ \caption{Esquema de conexionado de un motor bipolar}
+ \label{fig: Esquema de conexionado de un motor bipolar}
+\end{figure}
 
 \section{Problemas con los motores}
+Uno de los principales inconvenientes al tratar con motores de paso extraídos de hardware obsoleto es la falta de
+documentación asociada a dichos motores. No es trivial por ejemplo, aislar los cables para identificar cuál activa qué
+bobina.
+Una técnica para aisalar los cables 
 \section{La plataforma Arduino}
+Arduino es una plataforma de hardware y software con especificaciones libres para prototipos de dispositivos electrónicos.
+Debido a que está orientada a aficionados, diseñadores y artistas, resulta fácil de usar y aprender. Posee una comunidad
+bastante activa que permanentemente aporta diseños y soluciones nuevas. La plataforma básica cuenta con una plaqueta de pbc
+a la que vienen soldados los componentes, entre los que se cuentan, dependiendo de la versión de arduino, un conector USB o
+Serial y un microcontrolador ATMega8, ATMega168, ATMega328 o ATMega644 de arquitectura AVR. El microcontrolador es programado
+usando el Lenguaje de Programación Arduino, por lo que es necesario descagar el IDE de Arduino para poder escribir, compilar
+y almacenar los programas en los microcontroladores ATMega. Este IDE hace uso del compilador gcc-avr, también libre, para
+hacer compilación cruzada (cross compiling) para arquitecturas AVR. 
+\begin{figure}[h]
+ \centering
+ \includegraphics{./arduino-ide.png}
+ % arduino-ide.png: 320x384 pixel, 96dpi, 8.47x10.16 cm, bb=0 0 240 288
+ \caption{Interfaz de programacion Arduino}
+ \label{fig: Interfaz de programacion Arduino}
+\end{figure}
+
+
+El Lenguaje de Programación Arduino está basado en C++ y cuenta con una gran variedad de librerías y funciones predefinidas
+de alto nivel, muy bien documentadas, que hacen su aprandisaje relativamente sencillo. Como ejemplo podemos usar la librería
+usada en este trabajo, llamada \texttt{stepper}. Solo cuenta con cuatro funciones:
+\begin{itemize}
+ \item \texttt{Stepper(steps, pin1, pin2)}: Crea una instacia de la clase \texttt{Stepper} que hace referencia a un motor en
+particular adosado al circuito Arduino. El parámetro \texttt{steps} hace referencia a la cantidad de pasos por revolución
+del motor en cuestion, mientras que \texttt{pin1} y \texttt{pin2}, son los pines al los cuales estan conectados los dos
+cables de control del motor.
+ \item \texttt{Stepper(steps, pin1, pin2, pin3, pin4)}: Ídem a la anterior, solo que para un motor con 4 cables de control.
+ \item \texttt{setSpeed(rpm)}: Indica las revoluciones por minuto para una instancia de la clase Stepper.
+ \item \texttt{step(steps)}: Mueve el motor \texttt{steps} pasos. Si es negativo se mueve en la dirección contraria. La
+dirección depende del conexionado de cada motor.
+\end{itemize}
+
+
+
 \section{El foco}
 \section{La montura}
 \section{Casos de prueba}
