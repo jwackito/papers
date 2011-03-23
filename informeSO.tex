@@ -1,0 +1,186 @@
+% \documentclass[final,narroweqnarray,inline,twoside]{ieee}
+\documentclass[a4paper,10pt]{article}
+
+\usepackage{ucs}
+\usepackage[utf8x]{inputenc}
+\usepackage[spanish]{babel}
+\usepackage{fontenc}
+\usepackage{graphicx}
+\usepackage{textcomp}
+% \usepackage{tipa}
+
+\newcommand{\itref}[1]{[{#1}]}
+%uso: \itref{1}
+%1 es el número de la referencia
+
+\author{Joaquín Bogado
+\\LINTI - Facultad de Informática - Universidad Nacional de La Plata
+\\La Plata, B1900ASD, ARGENTINA}
+\title{Lethe - Modificaciones para usar particiones como pseudo-tmpfs}
+
+\hyphenation{Rootaufs SourceForge}
+\begin{document}
+\pagenumbering{none}
+\maketitle
+\sloppy
+
+\begin{abstract}
+\noindent Este informe describe una serie de modificaciones realizadas al programa Lethe para ampliar la cantidad de cambios
+que
+puedan hacerse al sistema de archivos y que estos no dependan del tamaño de la memoria RAM, evitando así fallos en
+el sistema por agotamiento de recursos.
+\end{abstract}
+
+\noindent \textbf{Palabras clave: } Lethe, Lihuen, GNU/Linux, Debian, Aufs
+
+\section{Introducción}
+El desarrollo de Lethe se basa en una generalización del código de
+RootAUFS\footnote{https://help.ubuntu.com/community/aufsRootFile SystemOnUsbFlash}, escrito originalmente por Nicholas
+Schembri. RootAUFS fue pensado originalmente para reducir el impacto de los ciclos de escritura en las memorias de estado
+sólido (que reemplazan al disco rígido en algunas portátiles y \textit{netbooks}) escribiendo los cambios realizados al
+sistema de archivos en memoria RAM en lugar de usar la memoria de estado sólido. Para esto, es necesario crear un sistema de
+archivos en memoria RAM llamado tmpfs y unificarlo con la raíz del sistema de archivos de la memoria de estado sólido
+mediante Aufs\footnote{http://aufs.sourceforge.net/}.
+
+Aufs fue en un primer momento una reimplementación de Unionfs\footnote{http://www.filesystems.org/project-unionfs.html}
+versión 1.x y, aunque ahora se ha vuelto un proyecto totalmente distinto, conserva las características principales de
+Unionfs. Básicamente, es un sistema de archivos \textbf{unificable} y \textbf{apilable}; unificable porque el contenido de
+varios directorios (\textit{branches} o ramificaciones) tendrá la apariencia de uno solo mientras que el contenido físico de
+estos estará separado; apilable porque los \textit{branches} se apilan uno sobre otro en el orden en que se van montando.
+Cada \textit{branch} puede tener sus propios atributos; por ejemplo, si el \textit{branch} es de sólo lectura o de
+lectura/escritura, si tiene control de errores o no, etc.
+
+Lethe se aprovecha de la capacidad de Aufs para permitir el acceso a múltiples directorios a través de un único punto de
+montaje.
+
+El sistema de archivos tmpfs, por su parte, es un sistema de archivos sumamente sencillo, que utiliza la memoria RAM (toda la
+disponible o parte de esta, dependiendo de los parámetros pasados a la hora de montar la unidad) como si fuera un sistema de
+archivos en disco. Además, tmpfs comparte el espacio de la memoria RAM con otros sistemas tmpfs (por ejemplo \textit{udev} y
+\textit{shm}).
+
+\section{El problema}
+El problema radica en que tmpfs no utiliza el espacio de almacenamiento de los discos si estos existen. No es
+posible crear un sistema de archivos de tamaño mayor que el total de memoria RAM disponible (generalmente de 2 a 4 GB). Por
+lo
+tanto, cuando la memoria se termina, por ejemplo debido a la copia de uno o varios archivos de gran tamaño (o incluso el
+borrado de varios archivos), el sistema se vuelve inestable debido a la falta de memoria, se torna inoperable y es necesario
+reiniciarlo.
+
+\section{\textit{Internals}}
+Una parte importante en el funcionamiento de Lethe es la que crea el sistema de archivos temporal en la carpeta
+\texttt{/rw}. Esta carpeta es la que posteriormente se une a la raíz del sistema de archivos mediante el empleo de Aufs y
+sobre la cual se hacen los cambios de todos los puntos de montaje que se congelan.
+La línea responsable de montar esta carpeta es la siguiente:
+\\\indent\texttt{run\_echo "mount -t tmpfs aufs-tmpfs /rw"}
+
+La función \texttt{run\_echo} ejecuta el comando que recibe como argumento, realiza un manejo precario de errores y aborta la
+ejecución del \textit{script} si el comando falla. Si el comando es exitoso, todo lo que se escriba en la carpeta
+\texttt{/rw} será
+volátil ya que el sistema de archivos tmpfs usa exclusivamente memoria RAM como medio de almacenamiento (como ya se
+ha mencionado).
+
+En este punto, el sistema raíz está montado en la variable \texttt{\${rootmnt}}. Luego se mueve esta raíz a \texttt{/ro}
+con el comando siguiente:
+\\\indent\texttt{run\_echo "mount --move \${rootmnt} /ro"}
+
+De esta manera el sistema de archivos temporal queda montado en \texttt{/rw} y el sistema de solo lectura queda montado en
+\texttt{/ro}.
+
+Posteriormente ambos sistemas de archivos se unifican con Aufs. El parámetro \texttt{dirs} indica que tanto \texttt{/rw} como
+\texttt{/ro} van a ser accesibles a través de \texttt{/aufs} y que \texttt{/ro} además va a ser de solo lectura
+(\texttt{/ro=ro}). 
+\\\indent\texttt{run\_echo "mount -t aufs -o dirs=/rw:/ro=ro aufs /aufs"}
+
+Debido a esto, ambos sistemas de archivos quedan ocultos en \texttt{/aufs/rw} y \texttt{/aufs/ro}. Para que puedan ser
+accedidos como un único sistema de archivos a través de \texttt{/} es necesario mover \texttt{/aufs} a \texttt{/root} (la
+cual en posteriores \textit{scripts} de la secuencia de arranque se transforma en \texttt{/}).
+\\\indent\texttt{run\_echo "mount --move /aufs /root"}
+
+Básicamente\footnote{Se han evitado algunos detalles de implementación como la desactivación de \textit{AppArmor}
+para Ubuntu, correcciones a \texttt{/etc/mtab} y algunas tareas que se agregan a \texttt{rc.local} con el fin de simplificar
+la comprensión de este texto y no desviarnos del objetivo del trabajo.}, esto permite que Lethe funcione, ya que cuando se
+crea un archivo en \texttt{/} o cualquier otro subdirectorio, se crea en realidad en \texttt{/aufs/rw/}. Por ejemplo, si
+ejecutamos \texttt{touch /home/lihuen/miarchivo}, además de ser accesible mediante \texttt{/home/lihuen/miarchivo} será
+accesible mediante \texttt{/aufs/rw/home/lihuen/miarchivo}. Sin embargo, si tratamos de acceder al sistema de archivos
+original mediante \texttt{/aufs/ro}, por ejemplo ejecutando \texttt{rm /aufs/ro/bin/bash} recibiremos un error indicando que
+el sistema de archivos es de solo lectura (aún teniendo privilegios de superusuario).
+
+\section{La solución}
+Habiendo explicado el funcionamiento interno de Lethe, se describe a continuación una solución al problema del agotamiento
+de memoria producido por el uso del sistema de archivos tmpfs.
+
+En lugar de utilizar la (a veces escasa) memoria RAM, podemos dedicar espacio en disco para escribir los cambios producidos
+en el sistema de archivos. La idea es tener una partición de tamaño suficiente (y mayor que la memoria RAM) de, digamos, 50 a
+100 GB, sin contenido y formateada con algún sistema de archivos (por ejemplo \textit{ext3}). Esta partición del disco debe
+tener la etiqueta ´lethe´ para que el instalador la encuentre y configure la variable de entorno \texttt{\$LETHE\_PART} en
+\texttt{/etc/lethe/lethe.conf}. En cada reinicio del sistema, si Lethe está activo, borrará el contenido de esta partición y
+la utilizará para montar \texttt{/rw} en lugar de montar \texttt{/rw} con el sistema de archivos tmpfs.
+
+La solución se implementó como sigue:
+\\\texttt{source \$\{rootmnt\}/etc/lethe/lethe.conf}
+\\\texttt{if [ -n "\$LETHE\_PART" ]; then}
+\\\texttt{\indent run\_echo "mount \$LETHE\_PART /rw"}
+\\\texttt{\indent run\_echo "rm -r -f /rw/*"}
+\\\texttt{else}
+\\\texttt{\indent run\_echo "mount -t tmpfs aufs-tmpfs /rw"}
+\\\texttt{fi}
+
+De esta manera, si la partición existe se utiliza como sistema de archivos temporal y se borra cada vez. Si la variable
+\texttt{\$LETHE\_PART} no está declarada, entonces se utiliza el sistema de archivos tmpfs como en el caso anterior.
+
+\section{Ventajas y desventajas}
+Esta solución tiene la desventaja de que incrementa el tiempo de arranque de la máquina debido a que durante el arranque se
+borra el contenido de la partición dedicada. Esto es necesario para simular el efecto de reiniciar en la memoria RAM. El
+tiempo de arranque no es constante entre reinicios ya que depende de la cantidad y el tamaño de los archivos generados en la
+sesión previa. 
+
+Otra desventaja es que el descubrimiento de la partición dedicada se realiza durante la instalación, es decir, una vez. Si la
+partición cambia será necesario cambiar a mano el archivo \texttt{/etc/lethe/lethe.conf} y apuntar la variable \$LETHE\_PART
+al dispositivo que corresponda.
+
+Además es necesario cambiar el esquema de particionamiento para que Lethe haga uso exclusivo de una partición dedicada.
+
+A pesar de lo arriba mencionado, es importante destacar que esta solución permite superar el límite de tamaño en tmpfs,
+restringido al tamaño de la memoria RAM, utilizando una partición
+dedicada tan grande como la partición utilizada. Además, si la partición no está disponible, el sistema usa el sistema tmpfs
+convencional basado en memoria RAM.
+
+\section{Pruebas realizadas}
+Se realizaron pruebas exitosas sobre máquinas virtuales donde se generaron archivos nuevos de hasta 6 veces el tamaño de la
+memoria RAM sin notar degradaciones en el sistema. Además se realizó la instalación masiva de la nueva versión en una de las
+salas de PCs de la Facultad de Informática de la UNLP donde podrá monitorearse su desempeño durante los próximos 6
+meses.
+
+Una vez que el paquete esté disponible para el público en general, se espera recibir reportes de usuarios de diferentes
+partes del mundo y sobre otros sistemas operativos además de Lihuen, como ya ha sucedido con lanzamientos anteriores.
+
+\section{Trabajo a futuro}
+Queda pendiente la actualización de los repositorios Git de SourceForge.net, además de la publicación de los binarios para
+el público en general, programada para los próximos días.
+
+Más adelante, se piensa incluir la detección de la partición en tiempo de arranque, permitiendo también la posibilidad de
+utilizar \textit{pendrives} en lugar de particiones como pseudo-tmpfs.
+
+Además se realizará una investigación acerca del uso de archivos como dispositivos de bloques. Es sabido que QEMU/KVM utiliza
+un sistema que permite crear discos virtuales en archivos que aumentan de tamaño en la medida que sea necesario. Esto
+evitaría tener que crear un archivo de, digamos, 50 GB, darle formato y borrarlo en cada reinicio. Además, haría innecesario
+el reparticionamiento del disco.
+
+\section{Referencias y enlaces de interés}
+
+\begin{enumerate}
+\item Página principal de Lihuen GNU/Linux\\
+\newblock {\texttt{http://lihuen.linti.unlp.edu.ar/index.php /Portada}}
+\item Página principal de Lethe\\
+\newblock {\texttt{http://sourceforge.net/projects/lethe/}}
+\item Javier Díaz, Joaquín Bogado, Claudia Banchoff, Einar Lanfranco
+\\\textit{Lethe: Congelador de particiones para Lihuen GNU/Linux}\\
+\newblock {\textit{Paper }publicado en el Encuentro Chileno de Ciencias de la Computación, Santiago de Chile, Chile -
+nov/2009}
+\item AUFS (Another Union File System) Root File System On USB Flash - Community Ubuntu Documentation\\
+\texttt{https://help.ubuntu.com/community/aufsRootFile SystemOnUsbFlash}
+\item Unionfs: A Stackable Unification File System\\
+\texttt{http://www.filesystems.org/project-unionfs.html}
+\end{enumerate}
+
+\end{document}
